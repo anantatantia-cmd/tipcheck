@@ -75,7 +75,7 @@ The risk level comes from a fixed points recipe, so the same facts always give t
 
 ## Why these tools
 
-- **Gemini (`gemini-flash-latest`, Google's current fast Gemini model)** reads screenshots and Hinglish, and returns JSON in a fixed shape (a JSON schema checked again with Zod), so the code never guesses at the format. It has a free tier. Set `GEMINI_MODEL` to pin a specific model.
+- **Gemini (`gemini-flash-lite-latest` first, `gemini-flash-latest` as backup)** reads screenshots and Hinglish, and returns JSON in a fixed shape (a JSON schema checked again with Zod), so the code never guesses at the format. It has a free tier. The lite model goes first because live logs showed the full Flash model often overloaded or rate-limited on the free tier. Each call has a 12 s timeout and one retry on overload. Set `GEMINI_MODEL` to pin a specific first choice.
 - **Next.js** gives one app with the page and the server route together, and deploys to Vercel with no extra setup.
 - **Vercel** hosts it for free, with the API key kept in its Environment Variables, never in code.
 - **GitHub** holds the code, the prompts, the red-flag rules, the reference lists and the test cases.
