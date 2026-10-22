@@ -6,6 +6,7 @@ const CFA_STUDY =
   "https://blogs.cfainstitute.org/marketintegrity/2026/08/24/indias-finfluencer-challenge-from-influence-to-accountability/";
 
 const TOOLS = [
+  { href: "/plan", icon: "🧭", title: "Where could my money go?", text: "Answer 7 quick questions and see how savings, deposits, PPF, funds, ETFs and stocks line up with your goal and comfort with risk. Real data, no advice." },
   { href: "/stocks", icon: "🔎", title: "Stock risk check", text: "Search any NSE stock and see how much it swings, how far it has fallen and how actively it trades, explained simply." },
   { href: "/compare", icon: "⚖️", title: "Compare two stocks", text: "Put two companies side by side and see which looks steadier on each measure. No overall “winner”." },
   { href: "/check", icon: "🧪", title: "Hype vs Facts", text: "Paste a tip or a post. We separate facts from hype, check claims against NSE and SEBI data, and flag scams." },

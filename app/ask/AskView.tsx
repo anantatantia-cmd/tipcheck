@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 
 type Turn = { q: string; answer: string; example: string; follow_ups: string[] };
@@ -14,8 +15,10 @@ const SUGGESTED = [
 ];
 
 export default function AskView() {
+  // /ask?q=... (linked from the planner's explanations) fills the box; the user still presses Ask.
+  const prefill = useSearchParams().get("q")?.slice(0, 300) ?? "";
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(prefill);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);

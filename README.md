@@ -8,6 +8,7 @@ A 10-second reality check for stock tips. Paste a tip from Telegram, WhatsApp or
 
 | Page | What it does |
 |---|---|
+| `/plan` | **Where could my money go?** A 7-question chat (amount, one-time or monthly, goal, time frame, reaction to a 20% fall, experience, emergency savings). It then lays out 10 kinds of investment: savings account, fixed and recurring deposits, PPF, liquid funds, Nifty 50 index funds/ETFs, mid and small company index funds, gold ETFs, and single large or small company shares. Each is grouped as "lines up", "has trade-offs" or "doesn't line up right now" by fixed, published rules, and shows its real past-year numbers, potential loss in rupees, lock-in, liquidity, costs, key risks, sources and dates. Gemini writes an optional plain-English summary from those numbers only. |
 | `/` and `/check` | **Tip check / Hype vs Facts.** Paste a tip or upload a screenshot. You get the red flags, SEBI status and risk level, plus each claim sorted into fact, opinion or promotion. Price claims ("up 40% this month") are checked against real NSE closing prices, with the date and source. |
 | `/stocks` | **Stock risk check.** Search any NSE company by name or ticker. Shows a 1-year price chart, swings (volatility), the biggest fall, trading volume, returns and its 52-week range, each with "What this means". Concerns and positives are listed with reasons. There's no single score. |
 | `/compare` | **Compare two stocks**, metric by metric, with each one's strengths and concerns. It never picks a winner. |
@@ -23,7 +24,15 @@ To refresh the price data (takes a few minutes, downloads about 250 daily files 
 node scripts/fetch-prices.mjs
 ```
 
-This rewrites `data/prices.json` and `public/series/*.json`. Commit and redeploy afterwards.
+This rewrites `data/prices.json` and `public/series/*.json`. Then rebuild the planner's data (NSE index files, gold ETFs, and AMFI liquid-fund NAVs via mfapi.in):
+
+```bash
+node scripts/fetch-options.mjs
+```
+
+The government small savings rates (PPF, Post Office deposits) are set every quarter. They're copied by hand into `scripts/fetch-options.mjs` with their source and a `validUntil` date; after that date the planner marks them "possibly out of date". Commit and redeploy afterwards.
+
+**Why the planner doesn't name specific funds or stocks:** under the SEBI (Investment Advisers) Regulations, 2013, personalised advice on what to buy needs SEBI registration. TipCheck isn't registered, so the planner stays at the level of *kinds* of investment, gives no amounts or allocations, ranks nothing as best, and points to SEBI's adviser register for personal recommendations.
 
 ## Job to be done
 

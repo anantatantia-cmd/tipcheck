@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import AskView from "./AskView";
 
 export const metadata: Metadata = {
@@ -15,7 +16,9 @@ export default function AskPage() {
         explains; it never tells you what to buy or sell.
       </p>
       <div className="mt-8">
-        <AskView />
+        <Suspense>
+          <AskView />
+        </Suspense>
       </div>
     </main>
   );

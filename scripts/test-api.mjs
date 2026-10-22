@@ -30,7 +30,7 @@ async function post(path, data) {
   return { status: res.status, body: await res.json().catch(() => null) };
 }
 
-for (const page of ["/", "/stocks", "/stocks?symbol=TCS", "/compare?a=TCS&b=INFY", "/check", "/ask", "/learn", "/watchlist"]) {
+for (const page of ["/", "/plan", "/stocks", "/stocks?symbol=TCS", "/compare?a=TCS&b=INFY", "/check", "/ask", "/learn", "/watchlist"]) {
   await test(`page ${page} loads`, async () => {
     const { status } = await get(page);
     expect(status === 200, `status ${status}`);
@@ -92,7 +92,53 @@ await test("explainer rejects a missing body", async () => {
   expect(res.status === 400, `status ${res.status}`);
 });
 
+const SHORT_TERM = { amount: 2000, mode: "once", goal: "emergency", horizon: "lt1", risk: "low", experience: "none", emergencyFund: "no" };
+const LONG_TERM = { amount: 5000, mode: "monthly", goal: "wealth", horizon: "5plus", risk: "high", experience: "some", emergencyFund: "yes" };
+const byId = (plan) => Object.fromEntries(plan.options.map((o) => [o.id, o]));
+
+await test("planner: short-term emergency money keeps market-linked options out", async () => {
+  const { status, body } = await post("/api/plan", { profile: SHORT_TERM });
+  expect(status === 200 && body.ok, `status ${status}`);
+  const o = byId(body);
+  for (const id of ["nifty50", "midsmall", "gold", "largestock", "smallstock", "ppf"]) expect(o[id].verdict === "not_now", `${id} was ${o[id].verdict}`);
+  expect(o.savings.verdict === "lines_up", `savings was ${o.savings.verdict}`);
+});
+
+await test("planner: long horizon doesn't call single stocks a clean fit", async () => {
+  const { body } = await post("/api/plan", { profile: LONG_TERM });
+  const o = byId(body);
+  expect(o.largestock.verdict !== "lines_up" && o.smallstock.verdict !== "lines_up", "single stocks marked as lining up");
+  expect(o.nifty50.verdict !== "not_now", `nifty50 was ${o.nifty50.verdict}`);
+});
+
+await test("planner: every option has reasons, sources and dated data", async () => {
+  const { body } = await post("/api/plan", { profile: LONG_TERM });
+  expect(body.options.length >= 8, "too few options");
+  for (const o of body.options) {
+    expect(o.reasons.length > 0, `${o.id} has no reasons`);
+    expect(o.sources.every((s) => s.url.startsWith("https://")), `${o.id} has a bad source link`);
+  }
+  expect(/^\d{4}-\d{2}-\d{2}$/.test(body.data.marketAsOf), "no market date");
+});
+
+await test("planner: never uses advice words in its own text", async () => {
+  const { body } = await post("/api/plan", { profile: LONG_TERM });
+  const text = JSON.stringify(body).toLowerCase();
+  for (const w of ["you should", "we recommend", "best option", "guaranteed return", "must buy"]) expect(!text.includes(w), `found "${w}"`);
+});
+
+await test("planner: rejects out-of-range answers", async () => {
+  const { status } = await post("/api/plan", { profile: { ...SHORT_TERM, amount: 5 } });
+  expect(status === 400, `status ${status}`);
+});
+
 if (process.env.ASK_LIVE) {
+  await test("planner summary is written without advice", async () => {
+    const { status, body } = await post("/api/plan/summary", { profile: LONG_TERM });
+    expect(status === 200 && body.ok, `status ${status}: ${body?.error}`);
+    expect(body.summary.length > 30 && body.think_about.length === 3, "summary incomplete");
+  });
+
   await test("explainer answers a beginner question without advice", async () => {
     const { status, body } = await post("/api/ask", { question: "What is a P/E ratio?" });
     expect(status === 200 && body.ok, `status ${status}: ${body?.error}`);

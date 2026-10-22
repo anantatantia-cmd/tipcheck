@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 export const NAV = [
+  { href: "/plan", label: "Plan" },
   { href: "/stocks", label: "Stocks" },
   { href: "/compare", label: "Compare" },
   { href: "/check", label: "Hype vs Facts" },

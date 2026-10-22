@@ -1,0 +1,88 @@
+{
+ "built": "2026-10-22",
+ "market": {
+  "from": "2025-10-14",
+  "asOf": "2026-10-22",
+  "indices": {
+   "Nifty 50": {
+    "ret1y": -9.8,
+    "volatility": 13.7,
+    "maxDrawdown": -15.6,
+    "from": "2025-10-14",
+    "asOf": "2026-10-22",
+    "pe": 19.13
+   },
+   "Nifty Midcap 150": {
+    "ret1y": -2.6,
+    "volatility": 16.4,
+    "maxDrawdown": -14,
+    "from": "2025-10-14",
+    "asOf": "2026-10-22",
+    "pe": 27.03
+   },
+   "Nifty Smallcap 250": {
+    "ret1y": -0.3,
+    "volatility": 17.5,
+    "maxDrawdown": -18.4,
+    "from": "2025-10-14",
+    "asOf": "2026-10-22",
+    "pe": 32.1
+   }
+  },
+  "goldEtfs": {
+   "count": 16,
+   "medianRet1y": 11.9,
+   "lowRet1y": 11.5,
+   "highRet1y": 12.7,
+   "medianVolatility": 32.2,
+   "worstDrawdown": -26.3,
+   "asOf": "2026-10-22",
+   "medianUnitPrice": 121
+  },
+  "liquidFunds": {
+   "count": 45,
+   "medianRet1y": 6.4,
+   "lowRet1y": 4.8,
+   "highRet1y": 6.5,
+   "medianVolatility": 0.2,
+   "worstDrawdown": -0.9,
+   "asOf": "2026-10-22"
+  },
+  "stocks": {
+   "large": {
+    "count": 93,
+    "medianRet1y": -3.4,
+    "medianVolatility": 27.5,
+    "medianDrawdown": -26.4,
+    "worstTenthDrawdown": -39.1,
+    "shareOfRisers": 44,
+    "medianPrice": 1250
+   },
+   "small": {
+    "count": 225,
+    "medianRet1y": -11,
+    "medianVolatility": 37.2,
+    "medianDrawdown": -32.2,
+    "worstTenthDrawdown": -47.5,
+    "shareOfRisers": 41,
+    "medianPrice": 609
+   }
+  }
+ },
+ "smallSavings": {
+  "quarter": "1 October – 31 December 2026",
+  "validUntil": "2026-12-31",
+  "source": "Ministry of Finance (Department of Economic Affairs) quarterly rates, as reported on 30 Sep 2026",
+  "url": "https://www.businesstoday.in/personal-finance/story/small-savings-scheme-interest-rates-unchanged-for-q3-fy27-check-ppf-scss-ssy-rates-558892-2026-09-30",
+  "officialUrl": "https://www.nsiindia.gov.in/InternalPage.aspx?Id_Pk=89",
+  "rates": {
+   "savings": 4,
+   "td1": 6.9,
+   "td2": 7,
+   "td3": 7.1,
+   "td5": 7.5,
+   "rd5": 6.7,
+   "ppf": 7.1
+  }
+ }
+}
