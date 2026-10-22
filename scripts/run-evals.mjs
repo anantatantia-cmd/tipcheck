@@ -20,10 +20,17 @@ for (const c of cases) {
   const res = await fetch(`${BASE}/api/check`, { method: "POST", body: form });
   // On Vercel, uploads over 4.5 MB are rejected with a plain-text 413 before the route runs.
   // The page turns that into the same "too big" message, so score it the way a user sees it.
-  const data =
-    res.status === 413
-      ? { ok: false, error: "That screenshot is too big. Please use one under 4 MB. (host 413)" }
-      : await res.json();
+  const body = await res.text();
+  let data;
+  if (res.status === 413) data = { ok: false, error: "That screenshot is too big. Please use one under 4 MB. (host 413)" };
+  else {
+    try {
+      data = JSON.parse(body);
+    } catch {
+      // A crash or timeout returns plain text; record it as a failure instead of stopping the run.
+      data = { ok: false, error: `host error ${res.status}: ${body.slice(0, 80)}` };
+    }
+  }
   const seconds = (Date.now() - started) / 1000;
   const e = c.expect;
   const problems = [];

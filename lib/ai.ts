@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { ApiError, GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import type { ImageType } from "./validateInput";
 
@@ -16,8 +16,21 @@ let client: GoogleGenAI | null = null;
 const getClient = () => (client ??= new GoogleGenAI({ apiKey: apiKey() }));
 
 // "gemini-flash-latest" always points at Google's current fast Gemini model.
-// Set GEMINI_MODEL to pin a specific one.
-const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+// Set GEMINI_MODEL to pin a specific one. If it's overloaded, we fall back to the lighter model.
+const MODELS = [process.env.GEMINI_MODEL || "gemini-flash-latest", "gemini-flash-lite-latest"];
+
+// Each attempt gets a short timeout and one quick retry on 429/5xx, so a busy Gemini
+// can't hold a request until the host's limit cuts it off.
+const HTTP_OPTIONS = {
+  timeout: 12_000,
+  retryOptions: { attempts: 2, initialDelay: 0.5, maxDelay: 2, httpStatusCodes: [429, 500, 502, 503, 504] },
+};
+
+// Overloaded, rate-limited, timed out, or this model isn't available: try the next model.
+function shouldTryNextModel(err: unknown): boolean {
+  if (err instanceof ApiError) return [404, 408, 429, 500, 502, 503, 504].includes(err.status);
+  return err instanceof Error && /timeout|timed out|abort/i.test(err.message);
+}
 
 export class AIRefusedError extends Error {}
 
@@ -41,11 +54,26 @@ async function generateJson<T extends z.ZodType>(
 ): Promise<z.infer<T>> {
   const { $schema: _drop, ...jsonSchema } = z.toJSONSchema(schema) as Record<string, unknown>;
   void _drop;
-  const response = await getClient().models.generateContent({
-    model: MODEL,
-    contents: [{ role: "user", parts }],
-    config: { systemInstruction, responseMimeType: "application/json", responseJsonSchema: jsonSchema },
-  });
+  let response;
+  for (const [i, model] of MODELS.entries()) {
+    try {
+      response = await getClient().models.generateContent({
+        model,
+        contents: [{ role: "user", parts }],
+        config: {
+          systemInstruction,
+          responseMimeType: "application/json",
+          responseJsonSchema: jsonSchema,
+          httpOptions: HTTP_OPTIONS,
+        },
+      });
+      break;
+    } catch (err) {
+      if (i === MODELS.length - 1 || !shouldTryNextModel(err)) throw err;
+      console.error(`gemini ${model} unavailable (${err instanceof ApiError ? err.status : "timeout"}), trying ${MODELS[i + 1]}`);
+    }
+  }
+  if (!response) throw new AIRefusedError();
   // No text back means Gemini blocked or declined the request.
   if (!response.text) throw new AIRefusedError();
   let raw: unknown;

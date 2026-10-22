@@ -18,7 +18,7 @@ import type { Card, CheckBody, CheckResponse, RedFlag } from "@/lib/types";
 import { NOT_A_TIP_MESSAGE, UNREADABLE_IMAGE_MESSAGE, validateInput } from "@/lib/validateInput";
 
 // Two Gemini calls can take a while; give Vercel room before it times out.
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const SOMETHING_WRONG = "Something went wrong, please try again.";
 
@@ -172,7 +172,14 @@ async function safeCardText(facts: { claim: string; risk_level: string }): Promi
   const all = (t: CardText) => [t.claim_plain, t.company_line, t.risk_reason, ...t.flag_lines.map((l) => l.line)];
   for (const strict of [false, true]) {
     const text = await writeCard(facts, strict);
-    if (!containsAdvice(all(text)) && !(await cardGivesAdvice(all(text)))) return text;
+    if (containsAdvice(all(text))) continue;
+    // If the second check itself is unavailable (Gemini busy), rely on the word check
+    // rather than failing the whole card.
+    const aiSaysAdvice = await cardGivesAdvice(all(text)).catch((err) => {
+      console.error("advice check unavailable:", err instanceof ApiError ? `ApiError ${err.status}` : "error");
+      return false;
+    });
+    if (!aiSaysAdvice) return text;
   }
   return {
     claim_plain: facts.claim,
