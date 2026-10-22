@@ -8,8 +8,7 @@ import { checkSource } from "./sebi";
 import type { Card, CheckBody, CompanyMatch, RedFlag, RiskLevel, SourceCheck } from "./types";
 import { NOT_A_TIP_MESSAGE, UNREADABLE_IMAGE_MESSAGE, type ImageType } from "./validateInput";
 
-// The TipCheck pipeline as five steps. The n8n workflow calls them one by one over HTTP
-// (app/api/steps/[step]); runLocal() runs the same steps in-process as a fallback.
+// The TipCheck pipeline as five steps, run in order by runLocal():
 //
 //   read (Gemini) -> checks (code) -> write (Gemini + word check) -> advice (Gemini) -> assemble (code)
 
@@ -183,7 +182,7 @@ export function assembleStep(checks: ChecksResult, text: CardText | null): Card 
   };
 }
 
-// Steps 3-5 together, used by the fallback and by "Not this company?".
+// Steps 3-5 together, used for a new tip and by "Not this company?".
 export async function writeAndAssemble(checks: ChecksResult): Promise<{ body: CheckBody; status: number }> {
   let written = await writeStep(checks.facts);
   if (!written.ok) return { body: { ok: false, error: written.error }, status: written.status };
@@ -196,7 +195,7 @@ export async function writeAndAssemble(checks: ChecksResult): Promise<{ body: Ch
   return { body: { ok: true, card: assembleStep(checks, written.text), extraction: null }, status: 200 };
 }
 
-// The whole pipeline in-process: the fallback when n8n isn't set up or doesn't answer.
+// The whole pipeline for one tip.
 export async function runLocal(
   text: string,
   image: { data: string; mediaType: ImageType } | null,

@@ -22,7 +22,7 @@ for (const c of cases) {
   // The page turns that into the same "too big" message, so score it the way a user sees it.
   const body = await res.text();
   let data;
-  if (res.status === 413) data = { ok: false, error: "That screenshot is too big. Please use one under 3 MB. (host 413)" };
+  if (res.status === 413) data = { ok: false, error: "That screenshot is too big. Please use one under 4 MB. (host 413)" };
   else {
     try {
       data = JSON.parse(body);
