@@ -15,15 +15,17 @@ const apiKey = () =>
 let client: GoogleGenAI | null = null;
 const getClient = () => (client ??= new GoogleGenAI({ apiKey: apiKey() }));
 
-// "gemini-flash-latest" always points at Google's current fast Gemini model.
-// Set GEMINI_MODEL to pin a specific one. If it's overloaded, we fall back to the lighter model.
-const MODELS = [process.env.GEMINI_MODEL || "gemini-flash-latest", "gemini-flash-lite-latest"];
+// "-latest" aliases always point at Google's current models. The lite model goes first: it's
+// faster and, on the free tier, far less often overloaded or rate-limited than the full Flash
+// model, which stays as the backup. Set GEMINI_MODEL to pin a specific first choice.
+const MODELS = [process.env.GEMINI_MODEL || "gemini-flash-lite-latest", "gemini-flash-latest"];
 
-// Each attempt gets a short timeout and one quick retry on 429/5xx, so a busy Gemini
-// can't hold a request until the host's limit cuts it off.
+// Each attempt gets a short timeout and one quick retry when Google is overloaded (5xx),
+// so a busy Gemini can't hold a request until the host's limit cuts it off. Rate limits
+// (429) aren't retried: they won't clear in a second, so we move to the other model.
 const HTTP_OPTIONS = {
   timeout: 12_000,
-  retryOptions: { attempts: 2, initialDelay: 0.5, maxDelay: 2, httpStatusCodes: [429, 500, 502, 503, 504] },
+  retryOptions: { attempts: 2, initialDelay: 0.5, maxDelay: 2, httpStatusCodes: [500, 502, 503, 504] },
 };
 
 // Overloaded, rate-limited, timed out, or this model isn't available: try the next model.
