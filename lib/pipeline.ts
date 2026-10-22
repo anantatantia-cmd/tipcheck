@@ -5,7 +5,9 @@ import { containsAdvice } from "./noAdvice";
 import { findRedFlags } from "./redFlags";
 import { scoreRisk } from "./risk";
 import { checkSource } from "./sebi";
-import type { Card, CheckBody, CompanyMatch, RedFlag, RiskLevel, SourceCheck } from "./types";
+import { getStockReport } from "./market";
+import type { Card, CheckBody, ClaimCheck, CompanyMatch, RedFlag, RiskLevel, SourceCheck } from "./types";
+import { SEBI_FETCHED } from "./sebi";
 import { NOT_A_TIP_MESSAGE, UNREADABLE_IMAGE_MESSAGE, type ImageType } from "./validateInput";
 
 // The TipCheck pipeline as five steps, run in order by runLocal():
@@ -25,6 +27,7 @@ export type ChecksResult = {
   flags: RedFlag[];
   risk: RiskLevel;
   readText: string;
+  claims: ClaimCheck[];
   facts: {
     claim: string;
     promised_return: string | null;
@@ -119,6 +122,7 @@ export function checksStep(extraction: Extraction, userText: string, chosenSymbo
     flags,
     risk,
     readText: extraction.full_text || userText,
+    claims: checkClaims(extraction.claims ?? [], company, source),
     // Gemini writes the plain-language text from these facts only.
     facts: {
       claim: extraction.claim,
@@ -132,6 +136,60 @@ export function checksStep(extraction: Extraction, userText: string, chosenSymbo
       risk_level: risk,
     },
   };
+}
+
+const NSE_SOURCE = { label: "NSE daily price files", url: "https://www.nseindia.com/all-reports" };
+const SEBI_SOURCE = {
+  label: "SEBI register of Research Analysts and Investment Advisers",
+  url: "https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=14",
+};
+const PERIOD_WORDS = { "1m": "about a month", "3m": "about 3 months", "1y": "about a year" } as const;
+
+// Hype vs Facts: check what can be checked against real data, label the rest honestly.
+// Never calls anything "fake" or "fraud": only "matches", "doesn't match" or "couldn't verify".
+function checkClaims(claims: Extraction["claims"], company: CompanyMatch | null, source: SourceCheck): ClaimCheck[] {
+  return claims.slice(0, 6).map((c): ClaimCheck => {
+    if (c.kind === "opinion") {
+      return { text: c.text, kind: c.kind, status: "not_checkable", evidence: "This is an opinion or a prediction. Nobody can verify the future.", source: null };
+    }
+    if (c.kind === "promotion") {
+      return { text: c.text, kind: c.kind, status: "not_checkable", evidence: "This is sales or pressure language, not information about the company.", source: null };
+    }
+
+    // A claim about past price moves: compare with NSE's end-of-day prices.
+    if (c.price_change_percent !== null && c.period && company) {
+      const m = getStockReport(company.symbol)?.metrics;
+      const actual = m ? { "1m": m.ret1m, "3m": m.ret3m, "1y": m.ret1y }[c.period] : null;
+      if (!m || actual === null) {
+        return { text: c.text, kind: c.kind, status: "unverified", evidence: `We don't have enough NSE price history for ${company.name} to check this.`, source: null };
+      }
+      if (m.possibleSplit) {
+        return { text: c.text, kind: c.kind, status: "unverified", evidence: `${company.name}'s price history may include a split or bonus issue, so we can't check this fairly.`, source: null };
+      }
+      const claimed = c.price_change_percent;
+      const close = Math.abs(actual - claimed) <= Math.max(5, Math.abs(claimed) * 0.25);
+      return {
+        text: c.text,
+        kind: c.kind,
+        status: close ? "matches" : "contradicted",
+        evidence: `NSE prices show ${company.name} changed ${actual > 0 ? "+" : ""}${actual}% over ${PERIOD_WORDS[c.period]} (to ${m.asOf}). The message says ${claimed > 0 ? "+" : ""}${claimed}%.`,
+        source: { ...NSE_SOURCE, date: m.asOf },
+      };
+    }
+
+    // A claim about SEBI registration: compare with the SEBI register.
+    if (/sebi|regist/i.test(c.text)) {
+      if (source.status === "registered") {
+        return { text: c.text, kind: c.kind, status: "matches", evidence: `${source.regNo} is in SEBI's register, belonging to ${source.name} (${source.type}). Being registered doesn't make every tip right.`, source: { ...SEBI_SOURCE, date: SEBI_FETCHED } };
+      }
+      if (source.status === "reg_number_not_found") {
+        return { text: c.text, kind: c.kind, status: "contradicted", evidence: `${source.regNo} isn't in SEBI's register of research analysts and investment advisers.`, source: { ...SEBI_SOURCE, date: SEBI_FETCHED } };
+      }
+      return { text: c.text, kind: c.kind, status: "unverified", evidence: "The message doesn't give a SEBI registration number (INH… or INA…), so this can't be checked. Ask for one.", source: { ...SEBI_SOURCE, date: SEBI_FETCHED } };
+    }
+
+    return { text: c.text, kind: c.kind, status: "unverified", evidence: "We couldn't check this against a reliable source. Treat it as unproven.", source: null };
+  });
 }
 
 const cardLines = (t: CardText) => [t.claim_plain, t.company_line, t.risk_reason, ...t.flag_lines.map((l) => l.line)];
@@ -179,6 +237,7 @@ export function assembleStep(checks: ChecksResult, text: CardText | null): Card 
     source: checks.source,
     flags: checks.flags.map((f) => ({ ...f, explanation: t.flag_lines.find((l) => l.kind === f.kind)?.line })),
     readText: checks.readText,
+    claims: checks.claims,
   };
 }
 

@@ -4,6 +4,27 @@ A 10-second reality check for stock tips. Paste a tip from Telegram, WhatsApp or
 
 > Built for a hackathon MVP. Not investment advice.
 
+## What's on the site
+
+| Page | What it does |
+|---|---|
+| `/` and `/check` | **Tip check / Hype vs Facts.** Paste a tip or upload a screenshot. You get the red flags, SEBI status and risk level, plus each claim sorted into fact, opinion or promotion. Price claims ("up 40% this month") are checked against real NSE closing prices, with the date and source. |
+| `/stocks` | **Stock risk check.** Search any NSE company by name or ticker. Shows a 1-year price chart, swings (volatility), the biggest fall, trading volume, returns and its 52-week range, each with "What this means". Concerns and positives are listed with reasons. There's no single score. |
+| `/compare` | **Compare two stocks**, metric by metric, with each one's strengths and concerns. It never picks a winner. |
+| `/ask` | **AI explainer.** Beginner questions answered in plain words, with an everyday example and follow-up questions. It never gives buy or sell advice. Runs on the server (Gemini). |
+| `/watchlist` | **Watchlist and practice portfolio.** Save stocks, and try "what if I'd put ₹10,000 in on this date?" using real past closing prices. It's clearly labelled as pretend money and saved only in your browser. |
+| `/learn` | **Learn.** Six 1-minute lessons, an 8-question quiz and myth-busting cards. Progress is saved in your browser. No streaks or timers. |
+
+**Market data:** end-of-day NSE closing prices from NSE's public daily price files (bhavcopy), covering about one year. They are not live: every page shows the "as of" date. Prices aren't adjusted for splits or bonuses, so a stock with a sudden one-day jump or drop of more than 40% is flagged and its returns are not judged. Fundamentals (debt, profits, revenue growth, P/E) aren't available yet, and the site says so instead of guessing.
+
+To refresh the price data (takes a few minutes, downloads about 250 daily files from NSE):
+
+```bash
+node scripts/fetch-prices.mjs
+```
+
+This rewrites `data/prices.json` and `public/series/*.json`. Commit and redeploy afterwards.
+
 ## Job to be done
 
 **When** a stock tip lands in my Telegram, WhatsApp or Instagram ("this smallcap will 3x by Diwali, join premium"), **I want to** see in seconds whether the source and the claim can be trusted, **so I can** decide calmly instead of losing money to a hyped or scam tip.
@@ -99,7 +120,7 @@ The risk level comes from a fixed points recipe, so the same facts always give t
 
 **Known limits:** almost any tip without a SEBI registration number comes out Medium or High. The company description comes from Gemini's general knowledge, not a live source. The NSE and SEBI lists are snapshots.
 
-**Out of scope for the MVP:** Telegram and WhatsApp bots, live market data, user accounts, a "report a scam" button.
+**Out of scope for the MVP:** Telegram and WhatsApp bots, live (intraday) market data, company fundamentals, user accounts, a "report a scam" button.
 
 ## Run it locally
 
@@ -129,6 +150,14 @@ npm run eval
 ```
 
 This sends every case in [`evals/tips.json`](evals/tips.json) to the app and prints PASS or FAIL for each. That's 11 cases across the 3 tests, including 2 tip screenshots in [`evals/screenshots/`](evals/screenshots/). The example tips are written from patterns seen in Reddit research (paid Telegram groups, 90%+ accuracy claims, PAN/Aadhaar requests). They are not copied from real people.
+
+To test the pages and the stocks and explainer APIs (no AI key needed, except with `ASK_LIVE=1`):
+
+```bash
+npm run test:api
+```
+
+Add a URL to test the live site: `node scripts/test-api.mjs https://tipcheck-nine.vercel.app`.
 
 ### Deploy to Vercel
 

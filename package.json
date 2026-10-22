@@ -7,13 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "eval": "node scripts/run-evals.mjs"
+    "eval": "node scripts/run-evals.mjs",
+    "test:api": "node scripts/test-api.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.30.0",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

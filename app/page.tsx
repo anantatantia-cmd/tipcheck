@@ -1,8 +1,18 @@
+import Link from "next/link";
 import Checker from "@/components/Checker";
 
 const SEBI_SURVEY = "https://www.sebi.gov.in/sebi_data/commondocs/jan-2026/Investor%20Survey%202025%20Main%20Report.pdf";
 const CFA_STUDY =
   "https://blogs.cfainstitute.org/marketintegrity/2026/08/24/indias-finfluencer-challenge-from-influence-to-accountability/";
+
+const TOOLS = [
+  { href: "/stocks", icon: "🔎", title: "Stock risk check", text: "Search any NSE stock and see how much it swings, how far it has fallen and how actively it trades, explained simply." },
+  { href: "/compare", icon: "⚖️", title: "Compare two stocks", text: "Put two companies side by side and see which looks steadier on each measure. No overall “winner”." },
+  { href: "/check", icon: "🧪", title: "Hype vs Facts", text: "Paste a tip or a post. We separate facts from hype, check claims against NSE and SEBI data, and flag scams." },
+  { href: "/ask", icon: "💬", title: "Ask anything", text: "What's a P/E ratio? Is an IPO safe? Short, plain-English answers to beginner questions." },
+  { href: "/learn", icon: "🎓", title: "Learn in 5 minutes", text: "Bite-size lessons, a quiz and myth-busting cards on risk, diversification and compounding." },
+  { href: "/watchlist", icon: "⭐", title: "Watchlist & practice portfolio", text: "Save stocks to watch, and try “what if I had invested?” with pretend money." },
+];
 
 const STATS = [
   { value: "62%", text: "of Indian investors act on finfluencer tips", source: "SEBI Investor Survey 2025", href: SEBI_SURVEY },
@@ -57,25 +67,7 @@ const FLAGS = [
 
 export default function Home() {
   return (
-    <div className="flex min-h-full flex-col bg-white text-[#0b0b0c]">
-      {/* Nav */}
-      <header className="sticky top-0 z-10 border-b border-black/5 bg-white/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
-          <a href="#" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <span className="inline-block h-3.5 w-3.5 rounded-full bg-emerald-600" aria-hidden />
-            tipcheck
-          </a>
-          <nav className="flex items-center gap-4">
-            <a href="#how" className="hidden text-sm text-black/70 hover:text-black sm:inline">
-              How it works
-            </a>
-            <a href="#check" className="rounded-full border border-black px-4 py-1.5 text-sm font-medium hover:bg-black hover:text-white">
-              Check a tip
-            </a>
-          </nav>
-        </div>
-      </header>
-
+    <div className="flex flex-col">
       <main className="flex-1">
         {/* Hero + the checker */}
         <section className="mx-auto grid max-w-6xl gap-10 px-5 pb-16 pt-12 md:grid-cols-2 md:items-start md:pt-20">
@@ -124,6 +116,23 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* The tools */}
+        <section className="mx-auto max-w-6xl px-5 pt-16">
+          <h2 className="font-serif text-4xl md:text-5xl">What you can do</h2>
+          <p className="mt-3 max-w-2xl text-black/60">Free tools for first-time investors. Real NSE and SEBI data, explained in plain words. No buy or sell calls.</p>
+          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {TOOLS.map((t) => (
+              <li key={t.href}>
+                <Link href={t.href} className="group block h-full rounded-2xl p-5 ring-1 ring-black/10 transition hover:ring-black/30 focus-visible:outline-2 focus-visible:outline-black">
+                  <span className="text-2xl" aria-hidden>{t.icon}</span>
+                  <h3 className="mt-3 text-lg font-semibold">{t.title} <span className="text-black/40 transition group-hover:translate-x-0.5" aria-hidden>→</span></h3>
+                  <p className="mt-1 text-sm text-black/65">{t.text}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* The job, and today's workflow vs TipCheck's */}
@@ -231,18 +240,6 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-black/5 bg-[#f7f7f5]">
-        <div className="mx-auto max-w-6xl space-y-2 px-5 py-8 text-xs text-black/50">
-          <p>
-            <strong className="text-black/70">TipCheck is not investment advice</strong> and is not a SEBI-registered adviser. It
-            never tells you to buy, sell or hold. Always check a registration number yourself at sebi.gov.in.
-          </p>
-          <p>
-            Company data: NSE listed companies and index lists. Adviser data: SEBI register of Research Analysts and Investment
-            Advisers. Both saved 22 Oct 2026. Tips are read by Google Gemini.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

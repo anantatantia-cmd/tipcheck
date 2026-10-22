@@ -54,6 +54,16 @@ export type Card = {
   source: SourceCheck;
   flags: RedFlag[];
   readText: string; // what the AI read from the tip, shown so the user can spot misreads
+  claims: ClaimCheck[];
+};
+
+// One statement from the tip, sorted into fact / opinion / promotion, with what we could verify.
+export type ClaimCheck = {
+  text: string;
+  kind: "fact" | "opinion" | "promotion";
+  status: "matches" | "contradicted" | "unverified" | "not_checkable";
+  evidence: string | null; // plain-language result of the check
+  source: { label: string; url: string; date: string } | null;
 };
 
 export type CheckBody =

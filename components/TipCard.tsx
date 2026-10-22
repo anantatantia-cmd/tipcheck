@@ -13,7 +13,20 @@ const RISK_STYLE = {
   Low: "bg-emerald-600 text-white",
 } as const;
 
-const RISK_LABEL = { High: "High risk", Medium: "Medium risk", Low: "Low risk signals found" } as const;
+// Claim labels always pair colour with words and an icon, so colour is never the only signal.
+const CLAIM_KIND = {
+  fact: { label: "Fact claim", cls: "bg-sky-50 text-sky-900 ring-1 ring-sky-200" },
+  opinion: { label: "Opinion / prediction", cls: "bg-violet-50 text-violet-900 ring-1 ring-violet-200" },
+  promotion: { label: "Promotion", cls: "bg-amber-50 text-amber-900 ring-1 ring-amber-200" },
+} as const;
+const CLAIM_STATUS = {
+  matches: { icon: "✓", label: "Matches the data", cls: "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200" },
+  contradicted: { icon: "✗", label: "Doesn't match the data", cls: "bg-red-50 text-red-900 ring-1 ring-red-200" },
+  unverified: { icon: "?", label: "Couldn't verify", cls: "bg-black/[.04] text-black/70 ring-1 ring-black/10" },
+  not_checkable: { icon: "", label: "", cls: "" },
+} as const;
+
+const RISK_LABEL ={ High: "High risk", Medium: "Medium risk", Low: "Low risk signals found" } as const;
 
 function sourceText(s: SourceCheck): { ok: boolean; text: string } {
   switch (s.status) {
@@ -75,7 +88,10 @@ export default function TipCard({
           {card.company ? (
             <>
               <p className="mt-1">
-                <strong>{card.company.name}</strong> <span className="opacity-60">(NSE: {card.company.symbol})</span>
+                <strong>{card.company.name}</strong> <span className="opacity-60">(NSE: {card.company.symbol})</span>{" "}
+                <a href={`/stocks?symbol=${encodeURIComponent(card.company.symbol)}`} className="text-sm underline">
+                  See its risk report →
+                </a>
               </p>
               <p className="mt-1 text-sm opacity-70">
                 {SIZE_LABEL[card.company.size]}
@@ -105,6 +121,42 @@ export default function TipCard({
             </details>
           )}
         </div>
+
+        {card.claims?.length > 0 && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide opacity-60">Facts vs hype</h3>
+            <ul className="mt-2 space-y-3">
+              {card.claims.map((c, i) => {
+                const k = CLAIM_KIND[c.kind];
+                const st = CLAIM_STATUS[c.status];
+                return (
+                  <li key={i} className="rounded-lg p-3 ring-1 ring-black/10">
+                    <p className="text-sm">&ldquo;{c.text}&rdquo;</p>
+                    <p className="mt-2 flex flex-wrap gap-2 text-xs font-medium">
+                      <span className={`rounded-full px-2 py-0.5 ${k.cls}`}>{k.label}</span>
+                      {c.status !== "not_checkable" && (
+                        <span className={`rounded-full px-2 py-0.5 ${st.cls}`}>
+                          <span aria-hidden>{st.icon} </span>
+                          {st.label}
+                        </span>
+                      )}
+                    </p>
+                    {c.evidence && <p className="mt-2 text-sm opacity-80">{c.evidence}</p>}
+                    {c.source && (
+                      <p className="mt-1 text-xs opacity-60">
+                        Source:{" "}
+                        <a href={c.source.url} target="_blank" rel="noreferrer" className="underline">
+                          {c.source.label}
+                        </a>
+                        , as of {c.source.date}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide opacity-60">Who&apos;s behind it</h3>

@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# NSE price downloads (rebuilt by scripts/fetch-prices.mjs)
+/.cache
