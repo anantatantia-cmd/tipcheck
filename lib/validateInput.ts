@@ -6,9 +6,10 @@ export const NOT_A_TIP_MESSAGE =
 export const UNREADABLE_IMAGE_MESSAGE =
   "We couldn't read that screenshot. Try a clearer one, or paste the text.";
 
-// Vercel rejects request bodies over 4.5 MB before our code runs, so stay under that.
-export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-export const TOO_BIG_MESSAGE = "That screenshot is too big. Please use one under 4 MB.";
+// Vercel rejects request bodies over 4.5 MB. A screenshot grows by about a third when n8n
+// forwards it to the read step as base64, so 3 MB keeps every hop under that limit.
+export const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+export const TOO_BIG_MESSAGE = "That screenshot is too big. Please use one under 3 MB.";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
 export type ImageType = (typeof IMAGE_TYPES)[number];
 

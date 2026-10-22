@@ -1,0 +1,342 @@
+{
+  "name": "TipCheck pipeline",
+  "nodes": [
+    {
+      "id": "5249eba9-5ba5-4641-9b30-5161fe32fba7",
+      "name": "Webhook: tip from TipCheck",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "80a699b0-818f-447e-b3ea-bd9c5209ad46",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tipcheck",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "ecb6d8b1-4840-4d4e-992a-085dbb2cf651",
+      "name": "1. Read tip (Gemini)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://tipcheck-nine.vercel.app/api/steps/read",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.body.text ?? '', image: $json.body.image ?? null }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "8b8c547e-8910-4490-8a55-a02aa11e5f74",
+      "name": "Read OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "10ebe2e1-f475-4e6b-b903-24666645d344",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f2350e08-6955-45f2-8c87-70437278fb50",
+      "name": "2. Checks: NSE, SEBI, red flags, risk",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://tipcheck-nine.vercel.app/api/steps/checks",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ extraction: $json.extraction, text: $('Webhook: tip from TipCheck').item.json.body.text ?? '' }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "48cc637c-f058-4742-b5c3-c524b1ce874d",
+      "name": "3. Write card (Gemini + word check)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://tipcheck-nine.vercel.app/api/steps/write",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ facts: $json.facts }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "ff8d025c-6e3e-4946-aaa9-5a6510a133ff",
+      "name": "Write OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "9141c39b-5389-431e-b5f5-2c67069ff4e8",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "08ed492c-093d-4bfc-b8fa-4d158d09e136",
+      "name": "4. Advice check (Gemini)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://tipcheck-nine.vercel.app/api/steps/advice",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.text }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "c55a42c9-1dec-4e7b-869b-9c2d44ee8bce",
+      "name": "5. Assemble card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://tipcheck-nine.vercel.app/api/steps/assemble",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ checks: $('2. Checks: NSE, SEBI, red flags, risk').item.json, text: $('3. Write card (Gemini + word check)').item.json.text, gives_advice: $json.gives_advice, extraction: $('1. Read tip (Gemini)').item.json.extraction }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "5adbf51b-a525-4562-9f55-fc814122f384",
+      "name": "Reply: card",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1920,
+        100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "65d8942a-8c57-4144-8485-64136dda962c",
+      "name": "Reply: read error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        420
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "cc41183c-d99a-449c-a9bd-f930ef211d69",
+      "name": "Reply: write error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        320
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: tip from TipCheck": {
+      "main": [
+        [
+          {
+            "node": "1. Read tip (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Read tip (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Read OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read OK?": {
+      "main": [
+        [
+          {
+            "node": "2. Checks: NSE, SEBI, red flags, risk",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: read error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Checks: NSE, SEBI, red flags, risk": {
+      "main": [
+        [
+          {
+            "node": "3. Write card (Gemini + word check)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Write card (Gemini + word check)": {
+      "main": [
+        [
+          {
+            "node": "Write OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write OK?": {
+      "main": [
+        [
+          {
+            "node": "4. Advice check (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: write error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Advice check (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "5. Assemble card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Assemble card": {
+      "main": [
+        [
+          {
+            "node": "Reply: card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

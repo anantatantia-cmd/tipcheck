@@ -16,7 +16,7 @@ Why it matters: SEBI's 2025 investor survey of 53,357 people found that 62% of i
 
 1. **Scam tip → warning card in 15 seconds.** Paste *"This smallcap will 3x by Diwali 🚀 guaranteed. Only 50 slots in premium, DM @xyz_trades"*. Within 15 s the card shows the claim, at least 3 red flags with quotes (guaranteed return, urgency, paid group), the source as "couldn't verify", and **High** risk.
 2. **Screenshot → correct company in 20 seconds.** Upload a screenshot of a tip that names a listed company. Within 20 s the card shows the matched NSE company (name and symbol), one line on what it does, and a "Not this company?" option. The card never gives buy, sell or hold advice.
-3. **Bad input → friendly message, no crash.** An empty box, "hello how are you", a PDF, an image over 4 MB, a blank screenshot, or the AI being unreachable each give a clear, kind message, never a raw error.
+3. **Bad input → friendly message, no crash.** An empty box, "hello how are you", a PDF, an image over 3 MB, a blank screenshot, or the AI being unreachable each give a clear, kind message, never a raw error.
 
 **Status (22 Oct 2026):** test 3 passes in the browser. Tests 1 and 2 have not yet been run end to end: they need a valid Gemini API key in `.env.local`. Until then the app shows a "TipCheck isn't set up yet" message instead of a card.
 
@@ -36,7 +36,7 @@ Why it matters: SEBI's 2025 investor survey of 53,357 people found that 62% of i
 
 | Stage | What happens | AI or code | File |
 |---|---|---|---|
-| **Input** | Text box and/or screenshot. Empty or too short input, non-images and images over 4 MB are rejected here and never reach the AI. | Code | [`lib/validateInput.ts`](lib/validateInput.ts) |
+| **Input** | Text box and/or screenshot. Empty or too short input, non-images and images over 3 MB are rejected here and never reach the AI. | Code | [`lib/validateInput.ts`](lib/validateInput.ts) |
 | **AI: read** | Gemini reads the text or screenshot and returns fixed JSON: is it a tip, the full text it read, company names as written, the claim, the source, urgency phrases, and requests for money or ID. | AI | [`lib/ai.ts`](lib/ai.ts) `readTip` |
 | **Logic** | Match the company to NSE's list of 2,611 listed companies, and get its size and industry from NSE's index lists. Look up the source in SEBI's register of 3,349 research analysts and investment advisers, by `INH`/`INA` registration number, or by name as a weaker match. Run the red-flag word rules. Add up risk points. | Code | [`lib/companies.ts`](lib/companies.ts), [`lib/sebi.ts`](lib/sebi.ts), [`lib/redFlags.ts`](lib/redFlags.ts), [`lib/risk.ts`](lib/risk.ts) |
 | **Action: explain** | Gemini turns those facts, and only those facts, into plain-English sentences. Two safety checks follow: a word check, then a second Gemini call that reads the finished card for implied advice. If either flags it, the card is rewritten once, then replaced with fixed safe text. | AI + code check | [`lib/ai.ts`](lib/ai.ts) `writeCard` and `cardGivesAdvice`, [`lib/noAdvice.ts`](lib/noAdvice.ts) |
