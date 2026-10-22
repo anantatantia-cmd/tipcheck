@@ -1,4 +1,11 @@
-import type { Card, CompanyMatch, SourceCheck } from "@/lib/types";
+import type { Card, CompanyMatch, CompanySize, SourceCheck } from "@/lib/types";
+
+const SIZE_LABEL: Record<CompanySize, string> = {
+  large: "Large company (Nifty 100)",
+  mid: "Mid-size company (Nifty Midcap 150)",
+  small: "Small company (Nifty Smallcap 250)",
+  very_small: "Very small company (outside the top 500)",
+};
 
 const RISK_STYLE = {
   High: "bg-red-600 text-white",
@@ -14,6 +21,11 @@ function sourceText(s: SourceCheck): { ok: boolean; text: string } {
       return { ok: true, text: `SEBI-registered ${s.type}: ${s.name} (${s.regNo}). Being registered doesn't make every tip right.` };
     case "reg_number_not_found":
       return { ok: false, text: `The tip quotes SEBI number ${s.regNo}, but it isn't in SEBI's register.` };
+    case "name_match":
+      return {
+        ok: false,
+        text: `The name matches SEBI-registered ${s.name} (${s.regNo}), but the tip shows no registration number, and anyone can use a name. Ask for their number and check it on sebi.gov.in.`,
+      };
     case "unverified":
       return {
         ok: false,
@@ -61,9 +73,15 @@ export default function TipCard({
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide opacity-60">The company</h3>
           {card.company ? (
-            <p className="mt-1">
-              <strong>{card.company.name}</strong> <span className="opacity-60">(NSE: {card.company.symbol})</span>
-            </p>
+            <>
+              <p className="mt-1">
+                <strong>{card.company.name}</strong> <span className="opacity-60">(NSE: {card.company.symbol})</span>
+              </p>
+              <p className="mt-1 text-sm opacity-70">
+                {SIZE_LABEL[card.company.size]}
+                {card.company.industry ? ` · ${card.company.industry}` : ""}
+              </p>
+            </>
           ) : null}
           <p className="mt-1 opacity-80">
             {card.companyLine}

@@ -13,7 +13,9 @@ export type FlagKind =
   | "no_company"
   | "company_not_listed"
   | "unverified_source"
-  | "fake_registration";
+  | "name_only_match"
+  | "fake_registration"
+  | "very_small_company";
 
 export type RedFlag = {
   kind: FlagKind;
@@ -23,11 +25,23 @@ export type RedFlag = {
   explanation?: string; // plain-language line written by the AI
 };
 
-export type CompanyMatch = { symbol: string; name: string; score: number };
+// Size from NSE's indices: Nifty 100 = large, Midcap 150 = mid, Smallcap 250 = small,
+// anything else listed = very small (outside the top 500).
+export type CompanySize = "large" | "mid" | "small" | "very_small";
+
+export type CompanyMatch = {
+  symbol: string;
+  name: string;
+  score: number;
+  size: CompanySize;
+  industry: string | null;
+};
 
 export type SourceCheck =
   | { status: "registered"; name: string; regNo: string; type: string }
   | { status: "reg_number_not_found"; regNo: string }
+  // The name matches a registered entity, but there's no number to prove it's really them.
+  | { status: "name_match"; name: string; regNo: string; type: string }
   | { status: "unverified"; shownAs: string | null };
 
 export type Card = {

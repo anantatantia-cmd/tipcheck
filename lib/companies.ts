@@ -1,5 +1,14 @@
 import nse from "@/data/nse_companies.json";
-import type { CompanyMatch } from "./types";
+import nseSize from "@/data/nse_size.json";
+import type { CompanyMatch, CompanySize } from "./types";
+
+const SIZES: Record<string, { size: string; industry: string }> = nseSize.symbols;
+
+// Company size and industry from NSE's index lists. Not in any = outside the top 500.
+function withSize(symbol: string, name: string, score: number): CompanyMatch {
+  const s = SIZES[symbol];
+  return { symbol, name, score, size: (s?.size as CompanySize) ?? "very_small", industry: s?.industry || null };
+}
 
 // Matches the names in a tip to NSE's list of listed companies.
 // Plain lookup, not AI: the company has to be exactly right.
@@ -35,7 +44,7 @@ export function matchCompanies(mentions: string[]): CompanyMatch[] {
   for (const mention of mentions) {
     for (const c of COMPANIES) {
       const s = score(mention, c);
-      if (s >= 40 && s > (best.get(c.symbol)?.score ?? 0)) best.set(c.symbol, { symbol: c.symbol, name: c.name, score: s });
+      if (s >= 40 && s > (best.get(c.symbol)?.score ?? 0)) best.set(c.symbol, withSize(c.symbol, c.name, s));
     }
   }
   return [...best.values()].sort((a, b) => b.score - a.score).slice(0, 4);
@@ -43,5 +52,5 @@ export function matchCompanies(mentions: string[]): CompanyMatch[] {
 
 export function companyBySymbol(symbol: string): CompanyMatch | null {
   const c = COMPANIES.find((x) => x.symbol === symbol);
-  return c ? { symbol: c.symbol, name: c.name, score: 100 } : null;
+  return c ? withSize(c.symbol, c.name, 100) : null;
 }

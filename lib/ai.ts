@@ -107,9 +107,26 @@ Never give investment advice: never tell the reader to buy, sell, hold, invest o
 
 Fields:
 - claim_plain: what the tip is claiming, in one sentence.
-- company_line: one sentence on what the matched company does. Only state what you are confident is true about that listed company; if unsure, or if no company was matched, write "We couldn't confirm what this company does."
+- company_line: one sentence on what the matched company does, starting from its NSE industry when given. Only add details you are confident are true about that listed company; if unsure and no industry is given, or if no company was matched, write "We couldn't confirm what this company does."
 - flag_lines: for each red flag given, its kind (copied exactly) and one sentence on why it matters.
 - risk_reason: one sentence on why the risk level is what it is, based on the flags.`;
+
+// ---------- Call 3: second safety check on the finished card ----------
+
+const AdviceVerdict = z.object({ gives_advice: z.boolean(), reason: z.string() });
+
+const ADVICE_CHECK_SYSTEM = `You review text that will be shown to a young investor about a stock tip they received. The text must describe the tip and its risks, and must never give investment advice.
+
+Set gives_advice to true if any sentence tells, nudges or implies that the reader should buy, sell, hold, invest in, stay away from or wait for a stock, or says a stock is a good, bad, safe or risky investment.
+Set it to false if the text only describes what the tip claims, what the company does, and why the red flags matter. Describing what the tip says ("the message tells you to buy") is not advice.
+Give a one-sentence reason.`;
+
+export async function cardGivesAdvice(lines: string[]): Promise<boolean> {
+  const verdict = await generateJson(AdviceVerdict, ADVICE_CHECK_SYSTEM, [
+    { text: `Text to review:\n${lines.map((l) => `- ${l}`).join("\n")}` },
+  ]);
+  return verdict.gives_advice;
+}
 
 export async function writeCard(facts: object, strict: boolean): Promise<CardText> {
   return generateJson(CardText, WRITE_CARD_SYSTEM, [

@@ -4,6 +4,8 @@ import type { RedFlag, RiskLevel } from "./types";
 // 4+ points = High, 2-3 = Medium, 0-1 = Low. The card never says "safe".
 const POINTS: Record<RedFlag["kind"], number> = {
   unverified_source: 2,
+  name_only_match: 1,
+  very_small_company: 1,
   fake_registration: 3,
   guaranteed_return: 2,
   accuracy_claim: 2,

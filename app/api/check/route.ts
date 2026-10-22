@@ -2,6 +2,7 @@ import { ApiError } from "@google/genai";
 import {
   AIRefusedError,
   apiKeyLooksValid,
+  cardGivesAdvice,
   Extraction,
   readTip,
   SETUP_MESSAGE,
@@ -101,6 +102,14 @@ async function buildCard(extraction: Extraction, userText: string, chosenSymbol?
       serious: true,
       quote: extraction.company_mentions[0],
     });
+  } else if (company.size === "very_small") {
+    // Pump-and-dump tips usually push tiny, thinly traded companies.
+    flags.push({
+      kind: "very_small_company",
+      label: "Very small company (outside India's top 500 listed companies)",
+      serious: false,
+      quote: null,
+    });
   }
 
   // Source: lookup in the saved SEBI register.
@@ -112,7 +121,14 @@ async function buildCard(extraction: Extraction, userText: string, chosenSymbol?
       serious: true,
       quote: source.regNo,
     });
-  } else if (source.status !== "registered") {
+  } else if (source.status === "name_match") {
+    flags.push({
+      kind: "name_only_match",
+      label: "Uses a SEBI-registered adviser's name, but shows no registration number",
+      serious: false,
+      quote: source.name,
+    });
+  } else if (source.status === "unverified") {
     flags.push({
       kind: "unverified_source",
       label: "We couldn't verify who is giving this tip",
@@ -128,7 +144,9 @@ async function buildCard(extraction: Extraction, userText: string, chosenSymbol?
     claim: extraction.claim,
     promised_return: extraction.promised_return,
     timeframe: extraction.timeframe,
-    company: company ? { name: company.name, nse_symbol: company.symbol } : null,
+    company: company
+      ? { name: company.name, nse_symbol: company.symbol, industry: company.industry, size: company.size }
+      : null,
     source,
     red_flags: flags.map(({ kind, label, quote }) => ({ kind, label, quote })),
     risk_level: risk.level,
@@ -148,12 +166,13 @@ async function buildCard(extraction: Extraction, userText: string, chosenSymbol?
   };
 }
 
-// Never show advice: check the wording, retry once, then fall back to fixed text.
+// Never show advice. Two checks: a fast word check, then a second AI that reads the
+// finished card for implied advice. Retry once, then fall back to fixed text.
 async function safeCardText(facts: { claim: string; risk_level: string }): Promise<CardText> {
   const all = (t: CardText) => [t.claim_plain, t.company_line, t.risk_reason, ...t.flag_lines.map((l) => l.line)];
   for (const strict of [false, true]) {
     const text = await writeCard(facts, strict);
-    if (!containsAdvice(all(text))) return text;
+    if (!containsAdvice(all(text)) && !(await cardGivesAdvice(all(text)))) return text;
   }
   return {
     claim_plain: facts.claim,
