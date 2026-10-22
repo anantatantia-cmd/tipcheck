@@ -42,7 +42,9 @@ Why it matters: SEBI's 2025 investor survey of 53,357 people found that 62% of i
 | **Action: explain** | Gemini turns those facts, and only those facts, into plain-English sentences. Two safety checks follow: a word check, then a second Gemini call that reads the finished card for implied advice. If either flags it, the card is rewritten once, then replaced with fixed safe text. | AI + code check | [`lib/ai.ts`](lib/ai.ts) `writeCard` and `cardGivesAdvice`, [`lib/noAdvice.ts`](lib/noAdvice.ts) |
 | **Output** | The card: risk badge and reason, the claim, the company (size and industry) with "Not this company?", who's behind it, red flags with exact quotes, and "What we read". | Code | [`components/TipCard.tsx`](components/TipCard.tsx), [`app/page.tsx`](app/page.tsx) |
 
-Everything runs in one Next.js app. The browser posts to one server route, [`app/api/check/route.ts`](app/api/check/route.ts), which runs the steps in order. The API key only exists on the server.
+**How the steps run:** the browser posts to [`app/api/check/route.ts`](app/api/check/route.ts), which checks the input, then hands the tip to an **n8n workflow** ([`n8n/tipcheck-workflow.json`](n8n/tipcheck-workflow.json)). n8n coordinates the pipeline by calling five step endpoints on Vercel in order (`/api/steps/read` → `checks` → `write` → `advice` → `assemble`, in [`app/api/steps/[step]/route.ts`](app/api/steps/[step]/route.ts)), branches on errors, and logs every run in its execution history. The step logic lives in [`lib/pipeline.ts`](lib/pipeline.ts), and the Gemini key stays on Vercel; n8n never sees it.
+
+If `N8N_WEBHOOK_URL` isn't set, or n8n errors or takes longer than 40 s, the same steps run directly on Vercel, so the site keeps working. The `x-tipcheck-via` response header (`n8n` or `local`) shows which path handled a request.
 
 ### Risk score
 
@@ -80,7 +82,7 @@ The risk level comes from a fixed points recipe, so the same facts always give t
 - **Vercel** hosts it for free, with the API key kept in its Environment Variables, never in code.
 - **GitHub** holds the code, the prompts, the red-flag rules, the reference lists and the test cases.
 - **Saved NSE and SEBI lists** (in [`data/`](data/)) instead of live lookups, to keep the MVP small. All are public lists, downloaded on 22 Oct 2026: NSE's listed companies, NSE's Nifty 100 / Midcap 150 / Smallcap 250 index lists (for company size and industry), and SEBI's register. The SEBI file keeps only names, registration numbers and type: no contact details.
-- **n8n** was in the original design, but is left out of the MVP. One app means fewer moving parts before the deadline.
+- **n8n** orchestrates the pipeline and keeps a log of every check, while the steps themselves stay as tested code on Vercel. The local fallback means an n8n outage never takes the site down.
 
 ## Failure cases, and how the screen shows them
 
@@ -130,6 +132,13 @@ npm run eval
 
 This sends every case in [`evals/tips.json`](evals/tips.json) to the app and prints PASS or FAIL for each. That's 11 cases across the 3 tests, including 2 tip screenshots in [`evals/screenshots/`](evals/screenshots/). The example tips are written from patterns seen in Reddit research (paid Telegram groups, 90%+ accuracy claims, PAN/Aadhaar requests). They are not copied from real people.
 
+### Connect n8n
+
+1. In n8n (n8n Cloud or self-hosted), go to **Workflows → Import from File** and choose [`n8n/tipcheck-workflow.json`](n8n/tipcheck-workflow.json).
+2. If your site isn't at `tipcheck-nine.vercel.app`, change the URL in the five HTTP nodes.
+3. **Activate** the workflow, open the **Webhook** node and copy its **Production URL**.
+4. Add it to Vercel as `N8N_WEBHOOK_URL` (Production), then redeploy. Responses now carry `x-tipcheck-via: n8n`.
+
 ### Deploy to Vercel
 
-Import the repo in Vercel, then add `GEMINI_API_KEY` under **Settings → Environment Variables** before deploying.
+Import the repo in Vercel, then add `GEMINI_API_KEY` (and `N8N_WEBHOOK_URL` once n8n is connected) under **Settings → Environment Variables** before deploying.
