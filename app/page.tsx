@@ -10,10 +10,28 @@ const STATS = [
   { value: "6 min", text: "median research before buying a stock", source: "NYU / NBER study", href: "https://www.investopedia.com/investors-tend-to-be-impulse-buyers-11745450" },
 ];
 
-const STEPS = [
-  { n: "1", title: "Paste or upload", text: "Paste the message, or upload a screenshot from Telegram, WhatsApp or Instagram. Hinglish is fine." },
-  { n: "2", title: "We check the facts", text: "The company against NSE's list, the sender against SEBI's register, and the message against common scam patterns." },
-  { n: "3", title: "You decide", text: "A plain-English card with the risk level and every red flag quoted word for word. No buy or sell calls, ever." },
+// Today's workflow vs the TipCheck workflow.
+const TODAY = [
+  "A tip arrives on Instagram, Telegram, WhatsApp or as an unsolicited message.",
+  "Ask strangers on Reddit (r/IndianStockMarket, r/IndiaStocks) or friends “is this legit?” and wait for replies.",
+  "Search SEBI registration, price history and the company by hand, or skip it entirely.",
+  "Decide on impulse in about 6 minutes and act on a broker app like Zerodha Kite or Groww.",
+];
+
+const WITH_TIPCHECK = [
+  { title: "Paste or upload", text: "Paste the tip text or upload a screenshot. Hinglish is fine." },
+  { title: "Confirm the company", text: "Check the matched NSE-listed company, and switch it with one tap if it's wrong." },
+  { title: "We check the facts", text: "SEBI registration, red-flag rules and a risk score, all done automatically." },
+  { title: "Read and decide", text: "A plain-language card in under a minute. Your call, with no buy or sell advice given." },
+];
+
+// What actually runs behind the checker.
+const PIPELINE = [
+  { stage: "Input", what: "Tip text or a screenshot, in a Next.js web app on Vercel. Bad input is stopped before any AI call." },
+  { stage: "AI", what: "Google Gemini reads the tip and extracts the stock, the claim and target, the timeframe, the source and urgency language as JSON. It also writes the final card." },
+  { stage: "Logic", what: "Plain code matches the company to NSE's list, checks the source against SEBI's register, runs red-flag rules, and scores risk from the facts (registration, red flags, company size)." },
+  { stage: "Action", what: "One server route runs every step in order, then two safety checks (a word check and a second Gemini pass) make sure the card gives no buy or sell advice." },
+  { stage: "Output", what: "The reality-check card: the claim, the company in plain words, SEBI status, red flags quoted word for word, and the risk level." },
 ];
 
 // An experienced investor's checklist: what to ask before acting on any tip.
@@ -47,9 +65,14 @@ export default function Home() {
             <span className="inline-block h-3.5 w-3.5 rounded-full bg-emerald-600" aria-hidden />
             tipcheck
           </a>
-          <a href="#check" className="rounded-full border border-black px-4 py-1.5 text-sm font-medium hover:bg-black hover:text-white">
-            Check a tip
-          </a>
+          <nav className="flex items-center gap-4">
+            <a href="#how" className="hidden text-sm text-black/70 hover:text-black sm:inline">
+              How it works
+            </a>
+            <a href="#check" className="rounded-full border border-black px-4 py-1.5 text-sm font-medium hover:bg-black hover:text-white">
+              Check a tip
+            </a>
+          </nav>
         </div>
       </header>
 
@@ -103,17 +126,70 @@ export default function Home() {
           </div>
         </section>
 
-        {/* How it works */}
-        <section className="mx-auto max-w-6xl px-5 py-16">
-          <h2 className="font-serif text-4xl md:text-5xl">How it works</h2>
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
-            {STEPS.map((s) => (
-              <div key={s.n} className="rounded-2xl p-6 ring-1 ring-black/10">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-black text-sm font-semibold text-white">{s.n}</span>
-                <h3 className="mt-4 text-lg font-semibold">{s.title}</h3>
-                <p className="mt-2 text-black/65">{s.text}</p>
-              </div>
-            ))}
+        {/* The job, and today's workflow vs TipCheck's */}
+        <section id="how" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16">
+          <p className="text-sm font-medium uppercase tracking-wide text-emerald-700">The job to be done</p>
+          <h2 className="mt-2 max-w-4xl text-balance font-serif text-3xl leading-tight md:text-4xl">
+            When a stock tip lands on social media or in a chat, I want to check the source and the stock fast, so I can avoid
+            getting scammed without spending hours on research.
+          </h2>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2">
+            <div className="rounded-3xl bg-[#f7f7f5] p-6 md:p-8">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-black/50">Today</h3>
+              <ol className="mt-5 space-y-4">
+                {TODAY.map((t, i) => (
+                  <li key={t} className="flex gap-3">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-black/10 text-sm font-semibold text-black/60">
+                      {i + 1}
+                    </span>
+                    <p className="text-black/70">{t}</p>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-6 text-sm text-black/50">Slow, unreliable, and usually skipped.</p>
+            </div>
+
+            <div className="rounded-3xl bg-emerald-50 p-6 ring-1 ring-emerald-100 md:p-8">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-800">With TipCheck</h3>
+              <ol className="mt-5 space-y-4">
+                {WITH_TIPCHECK.map((s, i) => (
+                  <li key={s.title} className="flex gap-3">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-700 text-sm font-semibold text-white">
+                      {i + 1}
+                    </span>
+                    <p>
+                      <strong>{s.title}.</strong> <span className="text-black/70">{s.text}</span>
+                    </p>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-6 text-sm text-emerald-900/70">About a minute, start to finish.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Under the hood: Input -> AI -> Logic -> Action -> Output */}
+        <section className="border-t border-black/5 bg-white">
+          <div className="mx-auto max-w-6xl px-5 py-16">
+            <h2 className="font-serif text-4xl md:text-5xl">Under the hood</h2>
+            <p className="mt-3 max-w-2xl text-black/60">
+              AI reads and explains. Plain code checks every fact that has to be exact. You make the decision.
+            </p>
+            <ol className="mt-10 grid gap-4 md:grid-cols-5">
+              {PIPELINE.map((p, i) => (
+                <li key={p.stage} className="relative rounded-2xl p-5 ring-1 ring-black/10">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-black/40">Step {i + 1}</p>
+                  <h3 className="mt-1 font-serif text-2xl">{p.stage}</h3>
+                  <p className="mt-2 text-sm text-black/65">{p.what}</p>
+                  {i < PIPELINE.length - 1 && (
+                    <span className="absolute -right-3 top-1/2 hidden -translate-y-1/2 text-black/30 md:block" aria-hidden>
+                      →
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
