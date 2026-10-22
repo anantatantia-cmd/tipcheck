@@ -1,0 +1,65 @@
+{
+  "note": "Example tips written from the patterns in our Reddit research (paid Telegram groups, 90%+ accuracy claims, PAN/Aadhaar requests, 'recharge' sites). They are not copied from real people. Run with: npm run eval (while npm run dev is running).",
+  "cases": [
+    {
+      "id": "test1-scam-smallcap",
+      "test": 1,
+      "text": "This smallcap will 3x by Diwali 🚀 guaranteed. Only 50 slots in premium, DM @xyz_trades",
+      "expect": { "ok": true, "risk": "High", "minFlags": 3, "flagKinds": ["guaranteed_return", "urgency", "paid_group"], "source": "unverified", "maxSeconds": 15 }
+    },
+    {
+      "id": "telegram-premium-pan",
+      "test": 1,
+      "text": "Our premium channel has 95% accuracy on option calls 🎯 Fee ₹3,000/month. Send PAN and Aadhaar for KYC, we are SEBI registered INH000099999",
+      "expect": { "ok": true, "risk": "High", "flagKinds": ["accuracy_claim", "id_request", "fake_registration"], "source": "reg_number_not_found", "maxSeconds": 15 }
+    },
+    {
+      "id": "institutional-recharge",
+      "test": 1,
+      "text": "Congratulations! You are selected for our institutional account. Recharge ₹10,000 on www.ipo-allot-pro.com to get upper circuit stocks allotment before 5 PM today only.",
+      "expect": { "ok": true, "risk": "High", "flagKinds": ["outside_site", "no_company"], "maxSeconds": 15 }
+    },
+    {
+      "id": "test2-screenshot-suzlon",
+      "test": 2,
+      "image": "screenshots/tip-suzlon.png",
+      "expect": { "ok": true, "symbolIn": ["SUZLON"], "risk": "High", "maxSeconds": 20 }
+    },
+    {
+      "id": "test2-screenshot-tatamotors",
+      "test": 2,
+      "image": "screenshots/tip-tatamotors.png",
+      "expect": { "ok": true, "symbolIn": ["TMCV", "TMPV"], "hasAlternatives": true, "flagKinds": ["accuracy_claim", "paid_group"], "maxSeconds": 20 }
+    },
+    {
+      "id": "test3-empty",
+      "test": 3,
+      "text": "",
+      "expect": { "ok": false, "error": "We couldn't find a stock tip in this. Paste the message that mentions a stock." }
+    },
+    {
+      "id": "test3-chat",
+      "test": 3,
+      "text": "hello how are you",
+      "expect": { "ok": false, "error": "We couldn't find a stock tip in this. Paste the message that mentions a stock." }
+    },
+    {
+      "id": "test3-pdf",
+      "test": 3,
+      "file": { "name": "notes.pdf", "type": "application/pdf", "bytes": 2000 },
+      "expect": { "ok": false, "errorIncludes": "isn't a picture" }
+    },
+    {
+      "id": "test3-blank-screenshot",
+      "test": 3,
+      "image": "screenshots/blank.png",
+      "expect": { "ok": false, "error": "We couldn't read that screenshot. Try a clearer one, or paste the text." }
+    },
+    {
+      "id": "test3-huge-image",
+      "test": 3,
+      "file": { "name": "huge.png", "type": "image/png", "bytes": 6000000 },
+      "expect": { "ok": false, "errorIncludes": "too big" }
+    }
+  ]
+}
