@@ -6,7 +6,9 @@ export const NOT_A_TIP_MESSAGE =
 export const UNREADABLE_IMAGE_MESSAGE =
   "We couldn't read that screenshot. Try a clearer one, or paste the text.";
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+// Vercel rejects request bodies over 4.5 MB before our code runs, so stay under that.
+export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+export const TOO_BIG_MESSAGE = "That screenshot is too big. Please use one under 4 MB.";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
 export type ImageType = (typeof IMAGE_TYPES)[number];
 
@@ -37,7 +39,7 @@ export async function validateInput(
   if (file.size > MAX_IMAGE_BYTES) {
     return {
       ok: false,
-      error: "That screenshot is too big. Please use one under 5 MB.",
+      error: TOO_BIG_MESSAGE,
     };
   }
 

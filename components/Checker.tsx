@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import TipCard, { WhatWeRead } from "@/components/TipCard";
 import type { Card, CheckResponse, CompanyMatch } from "@/lib/types";
+import { MAX_IMAGE_BYTES, TOO_BIG_MESSAGE } from "@/lib/validateInput";
 
 const EXAMPLE_TIP = "This smallcap will 3x by Diwali 🚀 guaranteed. Only 50 slots in premium, DM @xyz_trades";
 
@@ -25,6 +26,8 @@ export default function Checker() {
     const started = Date.now();
     try {
       const res = await fetch("/api/check", { method: "POST", ...init });
+      // The host rejects oversized uploads with a plain-text 413 before our route runs.
+      if (res.status === 413) throw new Error(TOO_BIG_MESSAGE);
       const data = (await res.json()) as CheckResponse;
       if (data.ok) {
         setCard(data.card);
@@ -34,9 +37,9 @@ export default function Checker() {
         setError(data.error);
         setErrorReadText(data.readText ?? "");
       }
-    } catch {
+    } catch (err) {
       setCard(null);
-      setError("Something went wrong, please try again.");
+      setError(err instanceof Error && err.message === TOO_BIG_MESSAGE ? TOO_BIG_MESSAGE : "Something went wrong, please try again.");
     } finally {
       setElapsedMs(Date.now() - started);
       setLoading(false);
@@ -44,6 +47,11 @@ export default function Checker() {
   }
 
   function check() {
+    // Catch big screenshots here, before uploading anything.
+    if (image && image.size > MAX_IMAGE_BYTES) {
+      setError(TOO_BIG_MESSAGE);
+      return;
+    }
     const form = new FormData();
     form.set("text", text);
     if (image) form.set("image", image);
