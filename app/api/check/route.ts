@@ -1,13 +1,13 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { ApiError } from "@google/genai";
 import {
+  AIRefusedError,
   apiKeyLooksValid,
-  ClaudeRefusedError,
   Extraction,
   readTip,
   SETUP_MESSAGE,
   writeCard,
   type CardText,
-} from "@/lib/claude";
+} from "@/lib/ai";
 import { companyBySymbol, matchCompanies } from "@/lib/companies";
 import { containsAdvice } from "@/lib/noAdvice";
 import { findRedFlags } from "@/lib/redFlags";
@@ -16,7 +16,7 @@ import { checkSource } from "@/lib/sebi";
 import type { Card, CheckBody, CheckResponse, RedFlag } from "@/lib/types";
 import { NOT_A_TIP_MESSAGE, UNREADABLE_IMAGE_MESSAGE, validateInput } from "@/lib/validateInput";
 
-// Two Claude calls can take a while; give Vercel room before it times out.
+// Two Gemini calls can take a while; give Vercel room before it times out.
 export const maxDuration = 30;
 
 const SOMETHING_WRONG = "Something went wrong, please try again.";
@@ -61,15 +61,18 @@ export async function POST(request: Request) {
     return reply({ ok: true, card, extraction });
   } catch (err) {
     // Log only the error type and status on the server; show the user a plain message.
-    console.error("check failed:", err instanceof Anthropic.APIError ? `${err.name} ${err.status}` : err);
-    // The key looks right but Anthropic rejects it (revoked, typo, no credit).
-    if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) {
-      return reply({ ok: false, error: SETUP_MESSAGE }, 503);
+    console.error("check failed:", err instanceof ApiError ? `ApiError ${err.status}` : err);
+    if (err instanceof ApiError) {
+      // The key looks right but Google rejects it (revoked, typo, API not enabled).
+      // Gemini reports a bad key as 400 "API key not valid", or as 401/403.
+      if (err.status === 401 || err.status === 403 || (err.status === 400 && /api key/i.test(err.message))) {
+        return reply({ ok: false, error: SETUP_MESSAGE }, 503);
+      }
+      if (err.status === 429) {
+        return reply({ ok: false, error: "TipCheck is busy right now. Please try again in a minute." }, 503);
+      }
     }
-    if (err instanceof Anthropic.RateLimitError) {
-      return reply({ ok: false, error: "TipCheck is busy right now. Please try again in a minute." }, 503);
-    }
-    if (err instanceof ClaudeRefusedError) {
+    if (err instanceof AIRefusedError) {
       return reply({ ok: false, error: "We couldn't check this one. Try pasting just the tip message." }, 422);
     }
     return reply({ ok: false, error: SOMETHING_WRONG }, 502);
@@ -84,7 +87,7 @@ async function buildCard(extraction: Extraction, userText: string, chosenSymbol?
   const company = chosenSymbol ? companyBySymbol(chosenSymbol) : (matches[0] ?? null);
   const alternatives = matches.filter((m) => m.symbol !== company?.symbol).slice(0, 3);
 
-  // Red flags: word rules plus the phrases Claude picked out.
+  // Red flags: word rules plus the phrases Gemini picked out.
   const flags: RedFlag[] = findRedFlags(texts, {
     urgency: extraction.urgency_phrases,
     moneyOrId: extraction.money_or_id_requests,
@@ -120,7 +123,7 @@ async function buildCard(extraction: Extraction, userText: string, chosenSymbol?
 
   const risk = scoreRisk(flags);
 
-  // Claude writes the plain-language text from these facts only.
+  // Gemini writes the plain-language text from these facts only.
   const facts = {
     claim: extraction.claim,
     promised_return: extraction.promised_return,

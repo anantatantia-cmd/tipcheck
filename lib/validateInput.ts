@@ -1,4 +1,4 @@
-// Checks the input before anything is sent to Claude, so bad input costs nothing.
+// Checks the input before anything is sent to the AI, so bad input costs nothing.
 
 export const NOT_A_TIP_MESSAGE =
   "We couldn't find a stock tip in this. Paste the message that mentions a stock.";

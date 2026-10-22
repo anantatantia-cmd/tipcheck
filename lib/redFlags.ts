@@ -66,7 +66,7 @@ export function findRedFlags(
     if (m) flags.push({ kind: rule.kind, label: rule.label, serious: rule.serious, quote: m[0].trim() });
   }
 
-  // Claude also reads reworded urgency and requests the rules miss
+  // Gemini also reads reworded urgency and requests the rules miss
   // ("lock karo before Diwali", "send screenshot of your demat").
   const has = (k: FlagKind) => flags.some((f) => f.kind === k);
   const urgency = aiPhrases.urgency.find((p) => p.trim());

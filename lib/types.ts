@@ -20,7 +20,7 @@ export type RedFlag = {
   label: string; // short title shown on the card
   quote: string | null; // exact words from the tip, when there are any
   serious: boolean;
-  explanation?: string; // plain-language line written by Claude
+  explanation?: string; // plain-language line written by the AI
 };
 
 export type CompanyMatch = { symbol: string; name: string; score: number };
@@ -39,7 +39,7 @@ export type Card = {
   alternatives: CompanyMatch[];
   source: SourceCheck;
   flags: RedFlag[];
-  readText: string; // what Claude read from the tip, shown so the user can spot misreads
+  readText: string; // what the AI read from the tip, shown so the user can spot misreads
 };
 
 export type CheckBody =
