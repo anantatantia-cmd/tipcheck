@@ -3,9 +3,11 @@ import { z } from "zod";
 import type { ImageType } from "./validateInput";
 
 // The API key is read from GEMINI_API_KEY (.env.local locally, Vercel settings in production).
-// This file only runs on the server, so the key never reaches the browser.
+// "Gemini" is also accepted, because the live Vercel project stores the key under that name
+// and Vercel can't rename a Sensitive variable. This file only runs on the server.
+const apiKey = () => (process.env.GEMINI_API_KEY || process.env.Gemini || "").trim();
 let client: GoogleGenAI | null = null;
-const getClient = () => (client ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }));
+const getClient = () => (client ??= new GoogleGenAI({ apiKey: apiKey() }));
 
 // "gemini-flash-latest" always points at Google's current fast Gemini model.
 // Set GEMINI_MODEL to pin a specific one.
@@ -19,7 +21,7 @@ export const SETUP_MESSAGE =
   "TipCheck isn't set up yet: the Gemini API key is missing or wrong. (App owner: set GEMINI_API_KEY in .env.local, or in Vercel's Environment Variables, then try again.)";
 
 export function apiKeyLooksValid(): boolean {
-  return /^AIza[\w-]{30,}$/.test(process.env.GEMINI_API_KEY?.trim() ?? "");
+  return /^AIza[\w-]{30,}$/.test(apiKey());
 }
 
 // Asks Gemini for JSON in the exact shape of a Zod schema, then checks it with Zod.
